@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Menú Digital & Pedidos por WhatsApp</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Iconos de Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('img/fondo.jpg'); 
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: -1; 
+    }
+
+    body {
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+    
+    #menu-container > div {
+      background-color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Efecto visual de rebote suave al hacer clic en botones */
+    button {
+      transition: transform 0.1s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body class="text-gray-800 pb-28">
+
+  <!-- Header / Portada del Negocio -->
+  <header class="bg-amber-500 text-white text-center py-8 px-4 shadow-lg relative">
+    <div class="max-w-md mx-auto">
+      <h1 class="text-3xl font-extrabold tracking-wide uppercase"> El Sabor Urbano</h1>
+      <p class="text-amber-100 text-sm mt-1">Las mejores hamburguesas y perros calientes de la ciudad</p>
+      <div class="mt-3 inline-block bg-amber-600 px-3 py-1 rounded-full text-xs font-semibold shadow-sm">
+        📍 Calle Principal / Delivery Activo 🚀
+      </div>
+    </div>
+  </header>
+
+  <!-- Filtro por Categorías con Control de Estado Activo -->
+  <nav class="sticky top-0 bg-white/90 backdrop-blur-md shadow-md z-10 py-3 px-4 overflow-x-auto whitespace-nowrap scrollbar-hide border-b">
+    <div class="max-w-md mx-auto flex space-x-2" id="categories-container">
+      <!-- Se generan dinámicamente desde JS -->
+    </div>
+  </nav>
+
+  <!-- Lista de Productos -->
+  <main class="max-w-md mx-auto p-4 space-y-4" id="menu-container">
+    <!-- Se generan dinámicamente con JS -->
+  </main>
+
+  <!-- 🏢 RIF y Pie de Página (Footer) -->
+  <footer class="max-w-md mx-auto text-center py-6 px-4 text-white/80 text-xs space-y-1">
+    <p class="font-bold tracking-wide">EL SABOR URBANO, C.A.</p>
+    <p>RIF: J-50123456-7</p>
+    <p class="text-[10px] text-white/60 pt-2">Todos los derechos reservados © 2026</p>
+  </footer>
+
+  <!-- Barra Inferior del Carrito / Resumen de Compra -->
+  <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl p-4 z-20 hidden">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+      <div>
+        <p class="text-xs text-gray-500">Total acumulado</p>
+        <p class="text-xl font-bold text-gray-900" id="cart-total">$0.00</p>
+      </div>
+      <button onclick="abrirModalPedido()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center space-x-2 shadow-lg transition hover:scale-105">
+        <span>Ver Pedido</span>
+        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal de Imagen Ampliada (Zoom de Producto) -->
+  <div id="image-modal" class="fixed inset-0 bg-black/80 z-40 hidden flex items-center justify-center p-4">
+    <div class="relative max-w-lg w-full bg-black rounded-2xl overflow-hidden shadow-2xl">
+      <button onclick="cerrarModalImagen()" class="absolute top-3 right-3 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 transition z-10">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+      <img id="modal-img-element" src="" alt="Imagen ampliada" class="w-full max-h-[75vh] object-contain" />
+      <div id="modal-img-caption" class="p-4 text-white text-center font-bold text-lg bg-gray-900"></div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación de Pedido -->
+  <div id="order-modal" class="fixed inset-0 bg-black/60 z-30 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <!-- Header Modal -->
+      <div class="bg-amber-500 text-white p-4 flex justify-between items-center">
+        <h3 class="font-bold text-lg">Tu Pedido</h3>
+        <button onclick="cerrarModalPedido()" class="text-white hover:text-gray-200">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Contenido Scrollable -->
+      <div class="p-4 overflow-y-auto flex-1 space-y-4">
+        <div id="modal-items-list" class="divide-y divide-gray-100"></div>
+
+        <form id="order-form" class="space-y-3 pt-2">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre Completo *</label>
+            <input type="text" id="cust-name" required placeholder="Ej: Carlos Pérez" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo de Entrega *</label>
+            <select id="cust-type" onchange="toggleDireccion()" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+              <option value="Delivery">Delivery (Envío a domicilio)</option>
+              <option value="PickUp">Retiro en el puesto</option>
+            </select>
+          </div>
+
+          <div id="address-field">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Dirección de Entrega / Referencia *</label>
+            <textarea id="cust-address" rows="2" placeholder="Ej: Av. Bolívar, frente al centro comercial..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Método de Pago Preferido *</label>
+            <select id="cust-payment" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+              <option value="Pago Móvil">Pago Móvil</option>
+              <option value="Efectivo (USD)">Efectivo ($)</option>
+              <option value="Zelle / Binance">Zelle / Binance</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Notas o Especificaciones adicionales</label>
+            <input type="text" id="cust-notes" placeholder="Ej: Sin cebolla / Salsas aparte..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none" />
+          </div>
+        </form>
+      </div>
+
+      <div class="p-4 border-t bg-gray-50 flex flex-col space-y-2">
+        <div class="flex justify-between items-center font-bold text-gray-800 text-lg">
+          <span>Total:</span>
+          <span id="modal-total-price">$0.00</span>
+        </div>
+        <button onclick="enviarPedidoWhatsApp()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold flex justify-center items-center space-x-2 shadow-md hover:scale-[1.02] transition">
+          <i data-lucide="message-square" class="w-5 h-5"></i>
+          <span>Enviar Pedido por WhatsApp</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LÓGICA -->
+  <script>
+    const TELEFONO_WHATSAPP = "+584128521692";
+
+    const productos = [
+      {
+        id: 1,
+        categoria: 'hamburguesas',
+        nombre: 'Hamburguesa Especial Doble',
+        descripcion: 'Doble carne de res, doble queso, tocineta crujiente, lechuga, tomate y salsas de la casa.',
+        precio: 6.50,
+        imagen: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600'
+      },
+      {
+        id: 2,
+        categoria: 'hamburguesas',
+        nombre: 'Hamburguesa de Pollo Crispy',
+        descripcion: 'Pechuga empanizada crujiente, queso cheddar, pepinillos y salsa tártara especial.',
+        precio: 5.50,
+        imagen: 'https://images.unsplash.com/photo-1625813506062-0aeb1d7a094b?w=600'
+      },
+      {
+        id: 3,
+        categoria: 'perros',
+        nombre: 'Perro Caliente Especial',
+        descripcion: 'Salchicha de res, cebollita picada, repollo, queso rallado, papitas hilos y 4 salsas.',
+        precio: 2.50,
+        imagen: 'https://images.unsplash.com/photo-1619740455993-9e612b1af08a?w=600'
+      },
+      {
+        id: 4,
+        categoria: 'perros',
+        nombre: 'Perro Caliente Gratinado',
+        descripcion: 'Con capa generosa de queso fundido gratinado y trozos de tocineta tostada.',
+        precio: 3.50,
+        imagen: 'https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?w=600'
+      },
+      {
+        id: 5,
+        categoria: 'bebidas',
+        nombre: 'Refresco en Lata (355ml)',
+        descripcion: 'Coca-Cola, Pepsi, Fanta o Sabor a Naranja bien frío.',
+        precio: 1.50,
+        imagen: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600'
+      }
+    ];
+
+    const categorias = [
+      { id: 'todas', nombre: 'Todas' },
+      { id: 'hamburguesas', nombre: 'Hamburguesas' },
+      { id: 'perros', nombre: 'Perros Calientes' },
+      { id: 'bebidas', nombre: 'Bebidas' }
+    ];
+
+    let carrito = {};
+    let categoriaActual = 'todas';
+
+    // 1. RENDERIZAR CATEGORÍAS
+    function renderizarCategorias() {
+      const navContainer = document.getElementById('categories-container');
+      navContainer.innerHTML = '';
+
+      categorias.forEach(cat => {
+        const btn = document.createElement('button');
+        const isActive = categoriaActual === cat.id;
+
+        btn.className = `px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm transition transform hover:scale-105 ${
+          isActive 
+            ? 'bg-amber-500 text-white shadow-amber-500/30 shadow-md' 
+            : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
+        }`;
+        
+        btn.innerText = cat.nombre;
+        btn.onclick = () => filtrarCategoria(cat.id);
+        navContainer.appendChild(btn);
+      });
+    }
+
+    // 2. RENDERIZAR MENÚ
+    function renderizarMenu(categoria = 'todas') {
+      const container = document.getElementById('menu-container');
+      container.innerHTML = '';
+
+      const filtrados = categoria === 'todas' 
+        ? productos 
+        : productos.filter(p => p.categoria === categoria);
+
+      filtrados.forEach(prod => {
+        const cantidad = carrito[prod.id] ? carrito[prod.id].cantidad : 0;
+        
+        const card = document.createElement('div');
+        card.className = 'rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-row p-3 space-x-3 items-center backdrop-blur-sm bg-white/95 transition hover:shadow-md';
+        card.innerHTML = `
+          <!-- Imagen con cursor de lupa y evento de clic para ampliar -->
+          <div class="relative group cursor-pointer flex-shrink-0" onclick="abrirModalImagen('${prod.imagen}', '${prod.nombre}')">
+            <img src="${prod.imagen}" alt="${prod.nombre}" class="w-24 h-24 object-cover rounded-lg transition group-hover:opacity-90" />
+            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center text-white">
+              <i data-lucide="zoom-in" class="w-6 h-6 drop-shadow"></i>
+            </div>
+          </div>
+
+          <div class="flex-1 flex flex-col justify-between h-full">
+            <div>
+              <h3 class="font-bold text-gray-900 leading-tight text-sm">${prod.nombre}</h3>
+              <p class="text-xs text-gray-500 mt-1 line-clamp-2">${prod.descripcion}</p>
+            </div>
+            
+            <div class="mt-3 flex justify-between items-center">
+              <span class="font-extrabold text-amber-600 text-base">$${prod.precio.toFixed(2)}</span>
+              
+              <div>
+                ${cantidad > 0 ? `
+                  <div class="flex items-center bg-gray-100 rounded-lg p-1 space-x-2 border">
+                    <button onclick="cambiarCantidad(${prod.id}, -1)" class="w-7 h-7 bg-white shadow-sm rounded-md font-bold text-sm flex items-center justify-center text-gray-700 hover:bg-gray-50">-</button>
+                    <span class="text-xs font-extrabold px-1 text-gray-800">${cantidad}</span>
+                    <button onclick="cambiarCantidad(${prod.id}, 1)" class="w-7 h-7 bg-amber-500 text-white shadow-sm rounded-md font-bold text-sm flex items-center justify-center hover:bg-amber-600">+</button>
+                  </div>
+                ` : `
+                  <button onclick="cambiarCantidad(${prod.id}, 1)" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-md flex items-center space-x-1 transition active:scale-95">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    <span>Agregar</span>
+                  </button>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    // FUNCIONES DEL MODAL DE IMAGEN (ZOOM)
+    function abrirModalImagen(urlImagen, nombreProducto) {
+      document.getElementById('modal-img-element').src = urlImagen;
+      document.getElementById('modal-img-caption').innerText = nombreProducto;
+      document.getElementById('image-modal').classList.remove('hidden');
+    }
+
+    function cerrarModalImagen() {
+      document.getElementById('image-modal').classList.add('hidden');
+    }
+
+    // 3. CAMBIO DE CATEGORÍA
+    function filtrarCategoria(cat) {
+      categoriaActual = cat;
+      renderizarCategorias();
+      renderizarMenu(cat);
+    }
+
+    // 4. MANEJO DEL CARRITO
+    function cambiarCantidad(id, delta) {
+      const prod = productos.find(p => p.id === id);
+      if (!carrito[id]) {
+        carrito[id] = { ...prod, cantidad: 0 };
+      }
+
+      carrito[id].cantidad += delta;
+
+      if (carrito[id].cantidad <= 0) {
+        delete carrito[id];
+      }
+
+      actualizarCarritoUI();
+      renderizarMenu(categoriaActual);
+    }
+
+    function actualizarCarritoUI() {
+      const cartBar = document.getElementById('cart-bar');
+      const cartTotal = document.getElementById('cart-total');
+      
+      let total = 0;
+      let count = 0;
+
+      Object.values(carrito).forEach(item => {
+        total += item.precio * item.cantidad;
+        count += item.cantidad;
+      });
+
+      if (count > 0) {
+        cartBar.classList.remove('hidden');
+        cartTotal.innerText = `$${total.toFixed(2)}`;
+      } else {
+        cartBar.classList.add('hidden');
+      }
+    }
+
+    // 5. MANEJO DEL MODAL DE PEDIDO
+    function abrirModalPedido() {
+      const modalList = document.getElementById('modal-items-list');
+      const modalTotal = document.getElementById('modal-total-price');
+      modalList.innerHTML = '';
+
+      let total = 0;
+
+      Object.values(carrito).forEach(item => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+
+        const row = document.createElement('div');
+        row.className = 'py-2 flex justify-between items-center text-sm';
+        row.innerHTML = `
+          <div>
+            <p class="font-bold text-gray-800">${item.nombre} x${item.cantidad}</p>
+            <p class="text-xs text-gray-400">$${item.precio.toFixed(2)} c/u</p>
+          </div>
+          <span class="font-bold text-gray-700">$${subtotal.toFixed(2)}</span>
+        `;
+        modalList.appendChild(row);
+      });
+
+      modalTotal.innerText = `$${total.toFixed(2)}`;
+      document.getElementById('order-modal').classList.remove('hidden');
+    }
+
+    function cerrarModalPedido() {
+      document.getElementById('order-modal').classList.add('hidden');
+    }
+
+    function toggleDireccion() {
+      const type = document.getElementById('cust-type').value;
+      const addressField = document.getElementById('address-field');
+      if (type === 'PickUp') {
+        addressField.classList.add('hidden');
+      } else {
+        addressField.classList.remove('hidden');
+      }
+    }
+
+    function enviarPedidoWhatsApp() {
+      const nombre = document.getElementById('cust-name').value.trim();
+      const tipoEntrega = document.getElementById('cust-type').value;
+      const direccion = document.getElementById('cust-address').value.trim();
+      const pago = document.getElementById('cust-payment').value;
+      const notas = document.getElementById('cust-notes').value.trim();
+
+      if (!nombre) {
+        alert("Por favor ingresa tu nombre.");
+        return;
+      }
+
+      if (tipoEntrega === 'Delivery' && !direccion) {
+        alert("Por favor ingresa tu dirección para el delivery.");
+        return;
+      }
+
+      let mensaje = `🍔 *NUEVO PEDIDO - EL SABOR URBANO*\n\n`;
+      mensaje += `👤 *Cliente:* ${nombre}\n`;
+      mensaje += `🛵 *Modalidad:* ${tipoEntrega}\n`;
+      if (tipoEntrega === 'Delivery') {
+        mensaje += `📍 *Dirección:* ${direccion}\n`;
+      }
+      mensaje += `💳 *Método de Pago:* ${pago}\n`;
+
+      if (notas) {
+        mensaje += `📝 *Notas:* ${notas}\n`;
+      }
+
+      mensaje += `\n🛒 *DETALLE DEL PEDIDO:*\n`;
+
+      let total = 0;
+      Object.values(carrito).forEach(item => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+        mensaje += `• ${item.cantidad}x ${item.nombre} - $${subtotal.toFixed(2)}\n`;
+      });
+
+      mensaje += `\n💰 *TOTAL A PAGAR:* $${total.toFixed(2)}`;
+
+      const url = `https://wa.me/${TELEFONO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+      window.open(url, '_blank');
+    }
+
+    renderizarCategorias();
+    renderizarMenu();
+  </script>
+</body>
+</html>
